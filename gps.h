@@ -57,65 +57,109 @@ double haversine(struct Coordinate geoLocationOne, struct Coordinate geoLocation
     return d_km;
 }
 
-// Checks if string is a valid coordinate. Returns decimal degree value if valid, else returns 200.
-double checkCoordinate (char* data) {
+double DMStoDD(int degrees, int minutes, double seconds, char direction) {
+    double decimal = degrees + (minutes / 60.0) + (seconds / 3600.0);
+    if (direction == 'S' || direction == 's' || direction == 'W' || direction == 'w') {
+        decimal *= -1;
+    }
+    return decimal;
+}
+
+double DDMtoDD(int degrees, double decimal_minutes, char direction) {
+    double decimal = degrees + (decimal_minutes / 60.0);
+    if (direction == 'S' || direction == 's' || direction == 'W' || direction == 'w') {
+        decimal *= -1;
+    }
+    return decimal;
+}
+
+// Checks if string is a valid latitude. Returns decimal degree value if valid, else returns 200.
+double checkValidLatitude (char* value) {
     // Degrees minutes seconds 32° 18' 23.1" N 122° 36' 52.5" W
     // Decimal minutes 32° 18.385' N 122° 36.875' W
     // Decimal degrees 32.30642° N 122.61458° W or +32.30642, -122.61458
     // Cardinal directions or signs
-    data = trim(data);
-    printf("checkCoordinate: %s --> ", data);
+    value = trim(value);
+    printf("checkCoordinate: %s --> ", value);
 
-    // Check for decimal degree format
-    char* endptr;
-    double value = strtod(data, &endptr);   // endptr is where the conversion stopped
-    printf("%lf   ", value);
+    double lat;
+    char dir;
+    int degs, mins;
+    double secs;
 
-    if (endptr != data && (*endptr == '\0' || isspace((unsigned char) *endptr))) {    
-        // if endptr == data, no conversion was performed
-        
-        // if *endptr == \0 or isspace, the entire string was converted
-        if (value >= -180.0 && value <= 180.0) {
-            printf("Valid decimal degree (%f, endptr: %s)\n", value, *endptr);
-            return value;   // Valid longitude and potential latitude
+    // Check decimal degrees format
+    if (sscanf(value, "%lf %c", &lat, &dir) == 2) {
+        if ((dir == 'N' || dir == 'S') && lat >= -90.0 && lat <= 90.0) {
+            printf("Valid latitude (%f)\n", lat);
+            return lat;   // Valid latitude
         }
     }
 
-    // Check for degrees minutes seconds format
-    double degrees, minutes, seconds;
-    char direction;
-
-    if (sscanf(data, "%lf° %lf' %lf\" %c", &degrees, &minutes, &seconds, &direction) == 4 ||
-        sscanf(data, "%lf° %lf' %c", &degrees, &minutes, &direction) == 3) {
-        // Convert to decimal degrees
-        double decimal_degrees = degrees + (minutes / 60.0) + (seconds / 3600.0);
-        if (direction == 'S' || direction == 'W') {
-            decimal_degrees *= -1;
-        }
-        if (decimal_degrees >= -180.0 && decimal_degrees <= 180.0) {
-            printf("Valid degrees minutes seconds (%f)\n", decimal_degrees);
-            return decimal_degrees;   // Valid longitude and potential latitude
+    // Check degrees minutes seconds format
+    if (sscanf(value, "%d° %d' %lf\" %c", &degs, &mins, &secs, &dir) == 4) {
+        lat = DMStoDD(degs, mins, secs, dir);
+        if (lat >= -90.0 && lat <= 90.0) {
+            printf("Valid latitude (%f)\n", lat);
+            return lat;   // Valid latitude
         }
     }
 
-    // Check for decimal minutes format
-    if (sscanf(data, "%lf° %lf' %c", &degrees, &minutes, &direction) == 3) {
-        // Convert to decimal degrees
-        double decimal_degrees = degrees + (minutes / 60.0);
-        if (direction == 'S' || direction == 'W') {
-            decimal_degrees *= -1;
-        }
-        if (decimal_degrees >= -180.0 && decimal_degrees <= 180.0) {
-            printf("Valid decimal minutes (%f)\n", decimal_degrees);
-            return decimal_degrees;   // Valid longitude and potential latitude
+    // Check decimal minutes format
+    if (sscanf(value, "%d° %lf' %c", &degs, &lat, &dir) == 3) {
+        lat = DDMtoDD(degs, lat, dir);
+        if (lat >= -90.0 && lat <= 90.0) {
+            printf("Valid latitude (%f)\n", lat);
+            return lat;   // Valid latitude
         }
     }
-
+    
     printf("Invalid coordinate\n");
     return 200;   // Invalid coordinate
 }
 
-int checkValidLat () {}
-int checkValidLon () {}
+// Checks if string is a valid longitude. Returns decimal degree value if valid, else returns 200.
+double checkValidLongitude (char* value) {
+    // Degrees minutes seconds 122° 36' 52.5" W
+    // Decimal minutes 122° 36.875' W
+    // Decimal degrees 122.61458° W or -122.61458
+    // Cardinal directions or signs
+    // ° or "degrees", ' or "minutes", " or "seconds"
+    value = trim(value);
+    printf("checkCoordinate: %s --> ", value);
+
+    double lat;
+    char dir;
+    int degs, mins;
+    double secs;
+
+    // Check decimal degrees format
+    if (sscanf(value, "%lf %c", &lat, &dir) == 2) {
+        if ((dir == 'E' || dir == 'W' || dir == 'e' || dir == 'w') && lat >= -180.0 && lat <= 180.0) {
+            printf("Valid longitude (%f)\n", lat);
+            return lat;   // Valid longitude
+        }
+    }
+
+    // Check degrees minutes seconds format
+    if (sscanf(value, "%d° %d' %lf\" %c", &degs, &mins, &secs, &dir) == 4) {
+        lat = DMStoDD(degs, mins, secs, dir);
+        if (lat >= -90.0 && lat <= 90.0) {
+            printf("Valid latitude (%f)\n", lat);
+            return lat;   // Valid latitude
+        }
+    }
+
+    // Check decimal minutes format
+    if (sscanf(value, "%d° %lf' %c", &degs, &lat, &dir) == 3) {
+        lat = DDMtoDD(degs, lat, dir);
+        if (lat >= -90.0 && lat <= 90.0) {
+            printf("Valid latitude (%f)\n", lat);
+            return lat;   // Valid latitude
+        }
+    }
+    
+    printf("Invalid coordinate\n");
+    return 200;   // Invalid coordinate
+}
 
 #endif // GPS_H

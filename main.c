@@ -107,7 +107,7 @@ int main () {
         
         while (data != NULL) {
             data = trim(data);
-            if (checkCoordinate(data) != 200) {
+            if (checkValidLatitude(data) != 200) {
                 // We've hit a coordinate. First row is data, not features.
                 first_row_is_data = 1;
                 rewind(input_file); // Start from the beginning
