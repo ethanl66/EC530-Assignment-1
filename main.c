@@ -1,27 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 #include "gps.h"
-
-char* trim(char* str) {
-    char* end;
-
-    // Trim leading space
-    while (isspace((unsigned char)*str)) str++;
-
-    if (*str == 0) // All spaces?
-        return str;
-
-    // Trim trailing space
-    end = str + strlen(str) - 1;
-    while (end > str && isspace((unsigned char)*end)) end--;
-
-    // Write new null terminator 
-    end[1] = '\0';
-
-    return str;
-}
 
 int main () {
 
@@ -50,21 +27,21 @@ int main () {
         }
 
         // Parse .csv file
-        // First row: try to find features named "latitude" and "longitude" (or variants). 
-        //  If found, read the corresponding columns. If not, prompt user to enter which columns they are.
+            // First row: try to find features named "latitude" and "longitude" (or variants). 
+            //  If found, read the corresponding columns. If not, prompt user to enter which columns they are.
         
         char buffer [1024];
         char* data;
-        int lat_col, lon_col;
-        int tot_cols, current_col = 0;
+        int lat_col = -1, lon_col = -1;
+        int row_count = 0, tot_cols = 0, current_col = 0;
+        int first_row_is_data = -1;     // -1 = not determined, 0 = features, 1 = data
 
         fgets(buffer, 1024, input_file);    // Read line
         // get total number of columns
-        // get lat/long column number if exists
+        // get lat/long column number if exists (0 index!)
         data = strtok(buffer, ",");
         while (data != NULL) {
             data = trim(data);
-            printf("Column %d: %s\n", current_col, data);
 
             if (strcmp(data, "\"latitude\"") == 0 || 
                 strcmp(data, "\"Latitude\"") == 0 || 
@@ -101,22 +78,47 @@ int main () {
         }
         printf("Latitude column: %d\n", lat_col);
         printf("Longitude column: %d\n", lon_col);
-        //data = strtok(buffer, ",");         // Split line by comma. Try to find one of the tokens as "latitude"
-        // while (strtok(buffer, ",") != NULL) {
-        //     if (strcmp(data, "latitude") == 0 || strcmp(data, "Latitude" || strcmp(data, "lat") == 0 || strcmp(data, "Lat") == 0)) {
-        //         lat_col = col_count;
-        //     } else if (strcmp(data, "longitude") == 0 || strcmp(data, "Longitude" || strcmp(data, "lon") == 0 || strcmp(data, "Lon") == 0)) {
-        //         lon_col = col_count;
-        //     }
+        printf("Total columns: %d\n", tot_cols);
+        
+        // If lat/long columns not found, prompt user to enter them
+        if (lat_col == -1 || lon_col == -1) {
+            printf("Could not find latitude and longitude columns. Please enter the column numbers for latitude and longitude, separated by a space (The first column is \"1,\" etc.): ");
+            scanf("%d %d", &lat_col, &lon_col);
+        }
+
+        // Count number of rows !!!!!!!!!!!-----------MIGHT BE WRONG-----------------!!!!!!!!!!!!!
+        while (fgets(buffer, 1024, input_file)) {
+            row_count++;
+        }
+        printf("Number of rows: %d\n", row_count);  
 
 
+        // Parse data
+        // If first row is data and not features, start there. Else start 2nd row.
+        // Detect valid coordinate, then determine if 1st row is data. Then insert into data struture.   
+        rewind(input_file);
+        for (int i = 0; i < row_count; i++) {}
 
-        //     if (strcmp(data, "latitude") == 0 || strcmp(data, "lat") == 0) {
-        //         lat_col = col_count;
-        //     } else if (strcmp(data, "longitude") == 0 || strcmp(data, "lon") == 0) {
-        //         lon_col = col_count;
-        //     }
-        // }
+        // Determine if 1st row is data or features
+        fgets(buffer, 1024, input_file);    // Read line
+        printf("========== Determine first row data or features ==========\n");
+        printf("Buffer: %s", buffer);
+        data = strtok(buffer, ",");         // Tokenize 1st field
+        
+        while (data != NULL) {
+            data = trim(data);
+            if (checkCoordinate(data) != 200) {
+                // We've hit a coordinate. First row is data, not features.
+                first_row_is_data = 1;
+                rewind(input_file); // Start from the beginning
+                break;
+            };
+            data = strtok(NULL, ",");   // to tokenize the same string to get the next token
+            first_row_is_data = 0;      // First row is features
+        }
+        printf("First row is data: %d\n", first_row_is_data);
+        printf("==========================================================\n");
+        
 
         fclose(input_file);
 
