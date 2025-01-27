@@ -102,12 +102,12 @@ int main () {
         // Determine if 1st row is data or features
         fgets(buffer, 1024, input_file);    // Read line
         printf("========== Determine first row data or features ==========\n");
-        printf("Buffer: %s", buffer);
+        //printf("Buffer: %s", buffer);
         data = strtok(buffer, ",");         // Tokenize 1st field
         
         while (data != NULL) {
             data = trim(data);
-            if (checkValidLatitude(data) != 200) {
+            if (checkValidLatitude(data) != 200 || checkValidLongitude(data) != 200) {
                 // We've hit a coordinate. First row is data, not features.
                 first_row_is_data = 1;
                 rewind(input_file); // Start from the beginning
@@ -116,9 +116,26 @@ int main () {
             data = strtok(NULL, ",");   // to tokenize the same string to get the next token
             first_row_is_data = 0;      // First row is features
         }
+        rewind(input_file);
         printf("First row is data: %d\n", first_row_is_data);
         printf("==========================================================\n");
+
         
+        // If 1st row is data, we start parsing from the 1st row. If not, we start from the 2nd row.
+        
+        // The data structure is an array of Coordinates (row #, lat, lon)
+        Coordinate* array1 = malloc (row_count * sizeof(Coordinate));
+        
+        if (first_row_is_data) {
+            fgets(buffer, 1024, input_file);    // Go to 2nd line if 1st row is data
+        }
+
+
+
+
+
+
+
 
         fclose(input_file);
 
