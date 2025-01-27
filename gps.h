@@ -57,7 +57,7 @@ double haversine(struct Coordinate geoLocationOne, struct Coordinate geoLocation
 
     return d_km;
 }
-
+// ============ DD IS SHOWING UP WRONG! (CONVERSION OR WITHIN CHECKVALIDLATITUDE/LONGITUDE?)
 double DMStoDD(int degrees, int minutes, double seconds, char direction) {
     double decimal = degrees + (minutes / 60.0) + (seconds / 3600.0);
     if (direction == 'S' || direction == 's' || direction == 'W' || direction == 'w') {
@@ -82,13 +82,12 @@ double checkValidLatitude (char* value) {
     // Cardinal directions or signs
     // ° or "degrees", ' or "minutes", " or "seconds"
     value = trim(value);
-    //printf("checkCoordinate: %s --> ", value);
+    printf("chkLat: %s --> ", value);
 
     double lat;
     char dir;
     char direction [5];
-    int degs, mins;
-    double secs;
+    double degs, mins, secs;
     char extra;
 
     // Check degrees minutes seconds format
@@ -188,8 +187,8 @@ double checkValidLatitude (char* value) {
                 lat = -degs;
             }
             lat = degs;
-            //printf("Valid latitude (%f)\n", lat);
-            return lat;   // Valid longitude
+            printf("Valid latitude (%f)\n", lat);
+            return lat;   // Valid latitude
         }
     }
 
@@ -205,13 +204,12 @@ double checkValidLongitude (char* value) {
     // Cardinal directions or signs
     // ° or "degrees", ' or "minutes", " or "seconds"
     value = trim(value);
-    //printf("checkCoordinate: %s --> ", value);
+    printf("chkLon: %s --> ", value);
 
     double lon;
     char dir;
     char direction [5];
-    int degs, mins;
-    double secs;
+    double degs, mins, secs;
     char extra;
 
     // Check degrees minutes seconds format
