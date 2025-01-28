@@ -1,0 +1,325 @@
+        -:    0:Source:gps.h
+        -:    0:Graph:a-main.gcno
+        -:    0:Data:a-main.gcda
+        -:    0:Runs:2
+        -:    1:#ifndef GPS_H
+        -:    2:#define GPS_H
+        -:    3:
+        -:    4:#include <math.h>
+        -:    5:#include <stdio.h>
+        -:    6:#include <ctype.h>
+        -:    7:#include <stdlib.h>
+        -:    8:#include <string.h>
+        -:    9:
+        -:   10:typedef struct Coordinate {
+        -:   11:    int row_num;
+        -:   12:    double latitude;
+        -:   13:    double longitude;
+        -:   14:} Coordinate;
+        -:   15:
+        -:   16:
+        -:   17:// Useful constants
+        -:   18:#define EARTH_RADIUS_METERS 6371000 // meters
+        -:   19:#define M_PI 3.14159265358979323846
+        -:   20:
+      112:   21:char* trim(char* str) {
+        -:   22:    char* end;
+        -:   23:
+        -:   24:    // Trim leading space
+     112*:   25:    while (isspace((unsigned char)*str)) str++;
+        -:   26:
+      112:   27:    if (*str == 0) // All spaces?
+    #####:   28:        return str;
+        -:   29:
+        -:   30:    // Trim trailing space
+      112:   31:    end = str + strlen(str) - 1;
+      136:   32:    while (end > str && isspace((unsigned char)*end)) end--;
+        -:   33:
+        -:   34:    // Write new null terminator 
+      112:   35:    end[1] = '\0';
+        -:   36:
+      112:   37:    return str;
+        -:   38:}
+        -:   39:
+   606156:   40:double haversine(struct Coordinate geoLocationOne, struct Coordinate geoLocationTwo) {
+        -:   41:    // Convert decimal degrees to radians
+   606156:   42:    double lat1 = geoLocationOne.latitude * M_PI / 180;
+   606156:   43:    double lon1 = geoLocationOne.longitude * M_PI / 180;
+   606156:   44:    double lat2 = geoLocationTwo.latitude * M_PI / 180;
+   606156:   45:    double lon2 = geoLocationTwo.longitude * M_PI / 180;
+        -:   46:
+        -:   47:    // Calculate differences
+   606156:   48:    double dLat = lat2 - lat1;
+   606156:   49:    double dLon = lon2 - lon1;
+        -:   50:
+        -:   51:    // Haversine formula
+   606156:   52:    double a = sin(dLat /2 ) * sin(dLat / 2) + sin(dLon / 2) * sin(dLon / 2) * cos(lat1) * cos(lat2);
+        -:   53:    //double c = 2 * atan2(sqrt(a), sqrt(1-a));
+   606156:   54:    double c = 2 * asin(sqrt(a));
+   606156:   55:    double d_m = EARTH_RADIUS_METERS * c; // meters
+   606156:   56:    double d_km = d_m / 1000; // kilometers
+        -:   57:
+   606156:   58:    return d_km;
+        -:   59:}
+        -:   60:// ============ DD IS SHOWING UP WRONG! (CONVERSION OR WITHIN CHECKVALIDLATITUDE/LONGITUDE?)
+    #####:   61:double DMStoDD(int degrees, int minutes, double seconds, char direction) {
+    #####:   62:    double decimal = degrees + (minutes / 60.0) + (seconds / 3600.0);
+    #####:   63:    if (direction == 'S' || direction == 's' || direction == 'W' || direction == 'w') {
+    #####:   64:        decimal *= -1;
+        -:   65:    }
+    #####:   66:    return decimal;
+        -:   67:}
+        -:   68:
+       36:   69:double DDMtoDD(int degrees, double decimal_minutes, char direction) {
+       36:   70:    double decimal = degrees + (decimal_minutes / 60.0);
+       36:   71:    if (direction == 'S' || direction == 's' || direction == 'W' || direction == 'w') {
+    #####:   72:        decimal *= -1;
+        -:   73:    }
+       36:   74:    return decimal;
+        -:   75:}
+        -:   76:
+        -:   77:// Checks if string is a valid latitude. Returns decimal degree value if valid, else returns 200.
+       28:   78:double checkValidLatitude (char* value) {
+        -:   79:    // Degrees minutes seconds 122° 36' 52.5" W
+        -:   80:    // Decimal minutes 122° 36.875' W
+        -:   81:    // Decimal degrees 122.61458° W or -122.61458
+        -:   82:    // Cardinal directions or signs
+        -:   83:    // ° or "degrees", ' or "minutes", " or "seconds"
+       28:   84:    value = trim(value);
+       28:   85:    printf("chkLat: %s --> ", value);
+        -:   86:
+        -:   87:    double lat;
+        -:   88:    char dir;
+        -:   89:    char direction [5];
+        -:   90:    double degs, mins, secs;
+        -:   91:    char extra;
+        -:   92:
+        -:   93:    // Check degrees minutes seconds format
+       28:   94:    if (
+       28:   95:        sscanf(value, "%d° %d' %lf\" %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:   96:        sscanf(value, "%d° %d' %lf\" %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+       28:   97:        sscanf(value, "%d degrees %d minutes %lf seconds %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:   98:        sscanf(value, "%d degrees %d minutes %lf seconds %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+       28:   99:        sscanf(value, "%d degs %d mins %lf secs %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:  100:        sscanf(value, "%d degs %d mins %lf secs %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+        -:  101:
+       28:  102:        sscanf(value, "%d %d %lf %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:  103:        sscanf(value, "%d %d %lf %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+       28:  104:        sscanf(value, "%d %d %lf%c", &degs, &mins, &secs, &extra) == 3
+        -:  105:    ) {
+        -:  106:        // Type format is right, now check content validity
+    #####:  107:        if (
+    #####:  108:            degs >= -90 && degs <= 90 && mins >= 0 && mins < 60 && secs >= 0 && secs < 60 &&
+        -:  109:            (
+    #####:  110:                dir == 'N' || dir == 'S' || dir == 'n' || dir == 's' ||
+    #####:  111:                strcmp(direction, "North") == 0 || strcmp(direction, "South") == 0 ||
+    #####:  112:                strcmp(direction, "north") == 0 || strcmp(direction, "south") == 0 ||
+    #####:  113:                sscanf(value, "%d %d %lf", &degs, &mins, &secs) == 3
+        -:  114:        )) {
+        -:  115:            if (direction == "North" || direction == "south") {
+        -:  116:                dir = 'N';
+        -:  117:            }
+        -:  118:            if (direction == "North" || direction == "south") {
+        -:  119:                dir = 'S';
+        -:  120:            }
+    #####:  121:            lat = DMStoDD(degs, mins, secs, dir);
+        -:  122:            //("Valid longitude (%f)\n", lat);
+    #####:  123:            return lat;   // Valid longitude
+        -:  124:        }
+        -:  125:    }
+        -:  126:
+        -:  127:    // Check decimal minutes format
+       28:  128:    if (
+       28:  129:        sscanf(value, "%d° %lf' %c%c", &degs, &mins, &dir, &extra) == 3 ||
+       28:  130:        sscanf(value, "%d° %lf' %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  131:        sscanf(value, "%d degrees %lf minutes %c%c", &degs, &mins, &dir, &extra) == 3 ||
+       28:  132:        sscanf(value, "%d degrees %lf minutes %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  133:        sscanf(value, "%d degs %lf mins %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  134:        sscanf(value, "%d degs %lf mins %c%c", &degs, &mins, &dir, &extra) == 3 ||
+        -:  135:
+       28:  136:        sscanf(value, "%d %lf %c%c", &degs, &mins, &dir, &extra) == 3 ||
+       28:  137:        sscanf(value, "%d %lf %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  138:        sscanf(value, "%d %lf%c", &degs, &mins, &extra) == 2
+        -:  139:    ) {
+        -:  140:        // Type format is right, now check content validity
+       18:  141:        if (
+       18:  142:            degs >= -90 && degs <= 90 && mins >= 0 && mins < 60 &&
+        -:  143:            (
+       18:  144:                dir == 'N' || dir == 'S' || dir == 'n' || dir == 's' ||
+       18:  145:                strcmp(direction, "North") == 0 || strcmp(direction, "South") == 0 ||
+       18:  146:                strcmp(direction, "north") == 0 || strcmp(direction, "south") == 0 ||
+       18:  147:                sscanf(value, "%d %lf", &degs, &mins) == 2
+        -:  148:        )) {
+        -:  149:            if (direction == "North" || direction == "north") {
+        -:  150:                dir = 'N';
+        -:  151:            }
+        -:  152:            if (direction == "South" || direction == "south") {
+        -:  153:                dir = 'S';
+        -:  154:            }
+       18:  155:            lat = DDMtoDD(degs, mins, dir);
+        -:  156:            //printf("Valid longitude (%f)\n", lat);
+       18:  157:            return lat;   // Valid longitude
+        -:  158:        }
+        -:  159:    }
+        -:  160:
+        -:  161:    // Check decimal degrees format
+       10:  162:    if (
+       10:  163:        sscanf(value, "%lf° %c%c", &degs, &dir, &extra) == 2 ||
+       10:  164:        sscanf(value, "%lf° %s%c", &degs, &direction, &extra) == 2 ||
+       10:  165:        sscanf(value, "%lf degrees %c%c", &degs, &dir, &extra) == 2 ||
+       10:  166:        sscanf(value, "%lf degrees %s%c", &degs, &direction, &extra) == 2 ||
+       10:  167:        sscanf(value, "%lf degs %s%c", &degs, &direction, &extra) == 2 ||
+       10:  168:        sscanf(value, "%lf degs %c%c", &degs, &dir, &extra) == 2 ||
+        -:  169:
+       10:  170:        sscanf(value, "%lf %c%c", &degs, &dir, &extra) == 2 ||
+       10:  171:        sscanf(value, "%lf %s%c", &degs, &direction, &extra) == 2 ||
+       10:  172:        sscanf(value, "%lf%c", &degs, &extra) == 1
+        -:  173:    ) {
+        -:  174:        // Type format is right, now check content validity
+    #####:  175:        if (
+    #####:  176:            degs >= -90 && degs <= 90 &&
+        -:  177:            (
+    #####:  178:                dir == 'N' || dir == 'S' || dir == 'n' || dir == 's' ||
+    #####:  179:                strcmp(direction, "North") == 0 || strcmp(direction, "South") == 0 ||
+    #####:  180:                strcmp(direction, "north") == 0 || strcmp(direction, "south") == 0 ||
+    #####:  181:                sscanf(value, "%lf", &degs) == 1
+        -:  182:        )) {
+        -:  183:            if (direction == "South" || direction == "south") {
+        -:  184:                dir = 'S';
+        -:  185:            }
+    #####:  186:            if (dir == 'S' || dir == 's') {
+    #####:  187:                lat = -degs;
+        -:  188:            }
+    #####:  189:            lat = degs;
+    #####:  190:            printf("Valid latitude (%f)\n", lat);
+    #####:  191:            return lat;   // Valid latitude
+        -:  192:        }
+        -:  193:    }
+        -:  194:
+        -:  195:    //printf("Invalid coordinate\n");
+       10:  196:    return 200;   // Invalid coordinate
+        -:  197:}
+        -:  198:
+        -:  199:// Checks if string is a valid longitude. Returns decimal degree value if valid, else returns 200.
+       28:  200:double checkValidLongitude (char* value) {
+        -:  201:    // Degrees minutes seconds 122° 36' 52.5" W
+        -:  202:    // Decimal minutes 122° 36.875' W
+        -:  203:    // Decimal degrees 122.61458° W or -122.61458
+        -:  204:    // Cardinal directions or signs
+        -:  205:    // ° or "degrees", ' or "minutes", " or "seconds"
+       28:  206:    value = trim(value);
+       28:  207:    printf("chkLon: %s --> ", value);
+        -:  208:
+        -:  209:    double lon;
+        -:  210:    char dir;
+        -:  211:    char direction [5];
+        -:  212:    double degs, mins, secs;
+        -:  213:    char extra;
+        -:  214:
+        -:  215:    // Check degrees minutes seconds format
+       28:  216:    if (
+       28:  217:        sscanf(value, "%d° %d' %lf\" %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:  218:        sscanf(value, "%d° %d' %lf\" %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+       28:  219:        sscanf(value, "%d degrees %d minutes %lf seconds %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:  220:        sscanf(value, "%d degrees %d minutes %lf seconds %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+       28:  221:        sscanf(value, "%d degs %d mins %lf secs %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:  222:        sscanf(value, "%d degs %d mins %lf secs %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+        -:  223:
+       28:  224:        sscanf(value, "%d %d %lf %c%c", &degs, &mins, &secs, &dir, &extra) == 4 ||
+       28:  225:        sscanf(value, "%d %d %lf %s%c", &degs, &mins, &secs, &direction, &extra) == 4 ||
+       28:  226:        sscanf(value, "%d %d %lf%c", &degs, &mins, &secs, &extra) == 3
+        -:  227:    ) {
+        -:  228:        // Type format is right, now check content validity
+    #####:  229:        if (
+    #####:  230:            degs >= -180 && degs <= 180 && mins >= 0 && mins < 60 && secs >= 0 && secs < 60 &&
+        -:  231:            (
+    #####:  232:                dir == 'E' || dir == 'W' || dir == 'e' || dir == 'w' ||
+    #####:  233:                strcmp(direction, "East") == 0 || strcmp(direction, "West") == 0 ||
+    #####:  234:                strcmp(direction, "east") == 0 || strcmp(direction, "west") == 0 ||
+    #####:  235:                sscanf(value, "%d %d %lf", &degs, &mins, &secs) == 3
+        -:  236:        )) {
+        -:  237:            if (direction == "East" || direction == "east") {
+        -:  238:                dir = 'E';
+        -:  239:            }
+        -:  240:            if (direction == "West" || direction == "west") {
+        -:  241:                dir = 'W';
+        -:  242:            }
+    #####:  243:            lon = DMStoDD(degs, mins, secs, dir);
+        -:  244:            //printf("Valid longitude (%f)\n", lon);
+    #####:  245:            return lon;   // Valid longitude
+        -:  246:        }
+        -:  247:    }
+        -:  248:
+        -:  249:    // Check decimal minutes format
+       28:  250:    if (
+       28:  251:        sscanf(value, "%d° %lf' %c%c", &degs, &mins, &dir, &extra) == 3 ||
+       28:  252:        sscanf(value, "%d° %lf' %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  253:        sscanf(value, "%d degrees %lf minutes %c%c", &degs, &mins, &dir, &extra) == 3 ||
+       28:  254:        sscanf(value, "%d degrees %lf minutes %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  255:        sscanf(value, "%d degs %lf mins %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  256:        sscanf(value, "%d degs %lf mins %c%c", &degs, &mins, &dir, &extra) == 3 ||
+        -:  257:
+       28:  258:        sscanf(value, "%d %lf %c%c", &degs, &mins, &dir, &extra) == 3 ||
+       28:  259:        sscanf(value, "%d %lf %s%c", &degs, &mins, &direction, &extra) == 3 ||
+       28:  260:        sscanf(value, "%d %lf%c", &degs, &mins, &extra) == 2
+        -:  261:    ) {
+        -:  262:        // Type format is right, now check content validity
+       18:  263:        if (
+       18:  264:            degs >= -180 && degs <= 180 && mins >= 0 && mins < 60 &&
+        -:  265:            (
+       18:  266:                dir == 'E' || dir == 'W' || dir == 'e' || dir == 'w' ||
+       18:  267:                strcmp(direction, "East") == 0 || strcmp(direction, "West") == 0 ||
+       18:  268:                strcmp(direction, "east") == 0 || strcmp(direction, "west") == 0 ||
+       18:  269:                sscanf(value, "%d %lf", &degs, &mins) == 2
+        -:  270:        )) {
+        -:  271:            if (direction == "East" || direction == "east") {
+        -:  272:                dir = 'E';
+        -:  273:            }
+        -:  274:            if (direction == "West" || direction == "west") {
+        -:  275:                dir = 'W';
+        -:  276:            }
+       18:  277:            lon = DDMtoDD(degs, mins, dir);
+        -:  278:            //printf("Valid longitude (%f)\n", lon);
+       18:  279:            return lon;   // Valid longitude
+        -:  280:        }
+        -:  281:    }
+        -:  282:
+        -:  283:    // Check decimal degrees format
+       10:  284:    if (
+       10:  285:        sscanf(value, "%lf° %c%c", &degs, &dir, &extra) == 2 ||
+       10:  286:        sscanf(value, "%lf° %s%c", &degs, &direction, &extra) == 2 ||
+       10:  287:        sscanf(value, "%lf degrees %c%c", &degs, &dir, &extra) == 2 ||
+       10:  288:        sscanf(value, "%lf degrees %s%c", &degs, &direction, &extra) == 2 ||
+       10:  289:        sscanf(value, "%lf degs %s%c", &degs, &direction, &extra) == 2 ||
+       10:  290:        sscanf(value, "%lf degs %c%c", &degs, &dir, &extra) == 2 ||
+        -:  291:
+       10:  292:        sscanf(value, "%lf %c%c", &degs, &dir, &extra) == 2 ||
+       10:  293:        sscanf(value, "%lf %s%c", &degs, &direction, &extra) == 2 ||
+       10:  294:        sscanf(value, "%lf%c", &degs, &extra) == 1
+        -:  295:    ) {
+        -:  296:        // Type format is right, now check content validity
+    #####:  297:        if (
+    #####:  298:            degs >= -180 && degs <= 180 &&
+        -:  299:            (
+    #####:  300:                dir == 'E' || dir == 'W' || dir == 'e' || dir == 'w' ||
+    #####:  301:                strcmp(direction, "East") == 0 || strcmp(direction, "West") == 0 ||
+    #####:  302:                strcmp(direction, "east") == 0 || strcmp(direction, "west") == 0 ||
+    #####:  303:                sscanf(value, "%lf", &degs) == 1
+        -:  304:        )) {
+        -:  305:            if (direction == "West" || direction == "west") {
+        -:  306:                dir = 'W';
+        -:  307:            }
+    #####:  308:            if (dir == 'W' || dir == 'w') {
+    #####:  309:                lon = -degs;
+        -:  310:            }
+    #####:  311:            lon = degs;
+        -:  312:            //printf("Valid longitude (%f)\n", lon);
+    #####:  313:            return lon;   // Valid longitude
+        -:  314:        }
+        -:  315:    }
+        -:  316:
+        -:  317:    //printf("Invalid coordinate\n");
+       10:  318:    return 200;   // Invalid coordinate
+        -:  319:}
+        -:  320:
+        -:  321:#endif // GPS_H
